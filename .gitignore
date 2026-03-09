@@ -4,7 +4,10 @@ node_modules/
 # environment variables
 .env
 
-# build files
+# public folder
+public/
+
+# build output
 dist/
 build/
 
@@ -16,8 +19,5 @@ yarn-error.log*
 # OS files
 .DS_Store
 
-# Vite
-.vite
-
-# editor
-.vscode
+# editor settings
+.vscode/
