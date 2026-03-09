@@ -4,6 +4,7 @@ import FileExplorer from "../components/explorer/FileExplorer";
 import CodeEditor from "../components/editor/CodeEditor";
 import ChatPanel from "../components/chat/ChatPanel";
 import FileTabs from "../components/editor/FileTabs";
+import StatusBar from "../components/editor/StatusBar";
 
 function Editor() {
   return (
@@ -31,6 +32,9 @@ function Editor() {
             <CodeEditor />
           </div>
 
+          {/* Status Bar (only under editor) */}
+          <StatusBar />
+
         </div>
 
         {/* Chat */}
@@ -39,6 +43,7 @@ function Editor() {
         </div>
 
       </div>
+
     </div>
   );
 }
