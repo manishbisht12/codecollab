@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useContext, useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import Avatar from "react-avatar";
 import {
   Wifi,
   GitBranch,
@@ -9,8 +11,27 @@ import {
   PanelLeft,
   UsersRound
 } from "lucide-react";
+import { EditorContext } from "../../context/EditorContext";
+import { useSocket } from "../../context/SocketContext";
 
 function EditorHeader() {
+  const { activeTab } = useContext(EditorContext);
+  const { roomId } = useParams();
+  const socket = useSocket();
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on("room-users", (userList) => {
+      setUsers(userList);
+    });
+
+    return () => {
+      socket.off("room-users");
+    };
+  }, [socket]);
+
   return (
     <div className="h-14 border-b border-slate-800 flex items-center justify-between px-4 bg-[#020617] text-slate-300">
 
@@ -28,12 +49,12 @@ function EditorHeader() {
         {/* Branch */}
         <button className="flex items-center gap-2 px-3 py-1 border border-slate-700 bg-slate-900 rounded-md hover:bg-slate-800 transition">
           <GitBranch size={16} />
-          main
+          room: {roomId?.slice(0, 8)}...
         </button>
 
         {/* File Tab */}
-        <span className="text-sm text-slate-400  pb-1">
-          auth-refactor
+        <span className="text-sm text-slate-400 pb-1">
+          {activeTab ? activeTab.name : "No file selected"}
         </span>
       </div>
 
@@ -47,24 +68,26 @@ function EditorHeader() {
 
         {/* Avatars */}
         <div className="flex -space-x-2">
-          <img
-            src="https://i.pravatar.cc/30?img=1"
-            className="w-7 h-7 rounded-full border border-slate-900"
-          />
-          <img
-            src="https://i.pravatar.cc/30?img=2"
-            className="w-7 h-7 rounded-full border border-slate-900"
-          />
-          <img
-            src="https://i.pravatar.cc/30?img=3"
-            className="w-7 h-7 rounded-full border border-slate-900"
-          />
+          {users.slice(0, 3).map((user) => (
+            <Avatar 
+                key={user.socketId} 
+                name={user.username} 
+                size="28" 
+                round={true} 
+                className="border-2 border-[#020617]" 
+            />
+          ))}
+          {users.length > 3 && (
+            <div className="w-7 h-7 rounded-full bg-slate-800 border-2 border-[#020617] flex items-center justify-center text-[10px] text-white">
+              +{users.length - 3}
+            </div>
+          )}
         </div>
 
         {/* User Count */}
         <div className="flex items-center gap-1 px-2 py-1 bg-slate-900 border border-slate-700 rounded-md text-sm">
           <UsersRound size={14} />
-          3
+          {users.length}
         </div>
       </div>
 
@@ -75,7 +98,9 @@ function EditorHeader() {
         <PanelRight size={18} className="cursor-pointer hover:text-white" />
         <Search size={18} className="cursor-pointer hover:text-white" />
         <Bell size={18} className="cursor-pointer hover:text-white" />
-        <Settings size={18} className="cursor-pointer hover:text-white" />
+        <button className="flex items-center gap-1 hover:text-white transition group">
+            <Settings size={18} className="group-hover:rotate-90 transition-transform duration-300" />
+        </button>
 
       </div>
 

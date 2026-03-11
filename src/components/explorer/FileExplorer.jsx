@@ -1,219 +1,195 @@
 import React, { useState, useContext } from "react";
+import { useParams } from "react-router-dom";
 import {
   ChevronRight,
   ChevronDown,
   Plus,
   Folder,
   File,
-  Trash2
+  Trash2,
+  Copy,
+  LogOut
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { EditorContext } from "../../context/EditorContext";
+import { useSocket } from "../../context/SocketContext";
 
 function FileExplorer() {
-
-  const { openFile } = useContext(EditorContext);
-
-  const [tree, setTree] = useState([
-    {
-      name: "src",
-      type: "folder",
-      open: true,
-      children: [
-        {
-          name: "components",
-          type: "folder",
-          open: true,
-          children: [
-            {
-              name: "Auth.tsx",
-              type: "file",
-              code: `export default function Auth(){
-  return <div>Auth Component</div>
-}`
-            },
-            {
-              name: "Dashboard.tsx",
-              type: "file",
-              code: `export default function Dashboard(){
-  return <div>Dashboard Page</div>
-}`
-            },
-            {
-              name: "Header.tsx",
-              type: "file",
-              code: `export default function Header(){
-  return <header>Header Component</header>
-}`
-            }
-          ]
-        },
-        {
-          name: "App.tsx",
-          type: "file",
-          code: `function App(){
-  return <h1>Hello World</h1>
-}
-
-export default App`
-        },
-        {
-          name: "index.ts",
-          type: "file",
-          code: `console.log("Application started");`
-        }
-      ]
-    }
-  ]);
+  const { 
+    openFile, 
+    tree, 
+    toggleFolder, 
+    addItemToTree, 
+    deleteFromTree 
+  } = useContext(EditorContext);
+  
+  const socket = useSocket();
+  const { roomId } = useParams();
 
   const [newItem, setNewItem] = useState(null);
   const [inputValue, setInputValue] = useState("");
 
-  // Toggle folder open/close
-  const toggleFolder = (folder) => {
-    folder.open = !folder.open;
-    setTree([...tree]);
+  const handleToggleFolder = (folderName) => {
+    toggleFolder(folderName);
+    if (socket) {
+        socket.emit("file-system-update", { 
+            roomId, 
+            type: "folder-toggle", 
+            data: { folderName } 
+        });
+    }
   };
 
-  // Add file/folder input
-  const addItem = (type) => {
+  const handleAddItem = (type) => {
     setNewItem(type);
   };
 
-  // Create file/folder
-  const createItem = () => {
-
+  const handleCreateItem = () => {
     if (!inputValue.trim()) return;
-
-    const newNode = {
-      name: inputValue,
-      type: newItem,
-      ...(newItem === "file" && { code: "// new file" }),
-      ...(newItem === "folder" && { children: [], open: false })
-    };
-
-    const updatedTree = [...tree];
-    updatedTree[0].children.push(newNode);
-
-    setTree(updatedTree);
+    addItemToTree(newItem, inputValue);
+    if (socket) {
+        socket.emit("file-system-update", { 
+            roomId, 
+            type: "item-create", 
+            data: { type: newItem, name: inputValue } 
+        });
+    }
     setInputValue("");
     setNewItem(null);
   };
 
-  // Delete file/folder
-  const deleteNode = (nodes, index) => {
-    nodes.splice(index, 1);
-    setTree([...tree]);
+  const handleDeleteItem = (name) => {
+    deleteFromTree(name);
+    if (socket) {
+        socket.emit("file-system-update", { 
+            roomId, 
+            type: "item-delete", 
+            data: { name } 
+        });
+    }
   };
 
-  // Render Tree
+  const copyRoomId = async () => {
+    try {
+      await navigator.clipboard.writeText(roomId);
+      toast.success("Room ID copied to clipboard!", {
+        style: { borderRadius: "8px", background: "#334155", color: "#fff" },
+      });
+    } catch (err) {
+      toast.error("Could not copy room ID");
+    }
+  };
+
   const renderTree = (nodes, level = 0) =>
     nodes.map((node, index) => (
       <div key={index} style={{ paddingLeft: level * 12 }}>
-
-        {/* FOLDER */}
         {node.type === "folder" ? (
           <>
             <div className="flex items-center justify-between group px-1 py-1 hover:bg-slate-800 rounded cursor-pointer">
-
               <div
-                onClick={() => toggleFolder(node)}
+                onClick={() => handleToggleFolder(node.name)}
                 className="flex items-center gap-1"
               >
-                {node.open ? (
-                  <ChevronDown size={14} />
-                ) : (
-                  <ChevronRight size={14} />
-                )}
-
+                {node.open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 <Folder size={16} className="text-yellow-400" />
                 {node.name}
               </div>
-
               <Trash2
                 size={14}
-                onClick={() => deleteNode(nodes, index)}
+                onClick={() => handleDeleteItem(node.name)}
                 className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 cursor-pointer"
               />
-
             </div>
-
             {node.open && node.children && (
               <div>{renderTree(node.children, level + 1)}</div>
             )}
           </>
         ) : (
-
-          /* FILE */
           <div className="flex items-center justify-between group px-1 py-1 hover:bg-slate-800 rounded cursor-pointer">
-
             <div
-              onClick={() => openFile(node)}
+              onClick={() => {
+                openFile(node);
+                if (socket) {
+                    socket.emit("file-system-update", { 
+                        roomId, 
+                        type: "file-open", 
+                        data: { node } 
+                    });
+                }
+              }}
               className="flex items-center gap-2"
             >
               <File size={14} className="text-indigo-400" />
               {node.name}
             </div>
-
             <Trash2
               size={14}
-              onClick={() => deleteNode(nodes, index)}
+              onClick={() => handleDeleteItem(node.name)}
               className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 cursor-pointer"
             />
-
           </div>
         )}
-
       </div>
     ));
 
   return (
     <div className="h-full text-sm text-slate-300 bg-[#020617] flex flex-col">
-
-      {/* HEADER */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-800">
-        <span className="text-xs text-slate-400 tracking-wide">
-          EXPLORER
-        </span>
-
+        <span className="text-xs text-slate-400 tracking-wide">EXPLORER</span>
         <div className="flex gap-2">
-
           <Plus
             size={16}
-            onClick={() => addItem("file")}
-            className="cursor-pointer text-slate-400 hover:text-white"
+            onClick={() => handleAddItem("file")}
+            className="cursor-pointer text-slate-400 hover:text-white transition-colors"
             title="New File"
           />
-
           <Folder
             size={16}
-            onClick={() => addItem("folder")}
-            className="cursor-pointer text-slate-400 hover:text-white"
+            onClick={() => handleAddItem("folder")}
+            className="cursor-pointer text-slate-400 hover:text-white transition-colors"
             title="New Folder"
           />
-
         </div>
       </div>
 
-      {/* CREATE INPUT */}
       {newItem && (
         <div className="px-3 py-2">
           <input
             autoFocus
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onBlur={createItem}
-            onKeyDown={(e) => e.key === "Enter" && createItem()}
+            onBlur={handleCreateItem}
+            onKeyDown={(e) => e.key === "Enter" && handleCreateItem()}
             placeholder={`Enter ${newItem} name`}
-            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs outline-none"
+            className="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs outline-none focus:border-indigo-500"
           />
         </div>
       )}
 
-      {/* FILE TREE */}
-      <div className="flex-1 overflow-y-auto px-2 py-2">
+      <div className="flex-1 overflow-y-auto px-2 py-2 no-scrollbar">
         {renderTree(tree)}
       </div>
 
+      <div className="p-3 border-t border-slate-800 bg-[#0f172a]/30 flex flex-col gap-2">
+        <button
+          onClick={copyRoomId}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 rounded-lg text-xs font-medium transition-all group"
+        >
+          <Copy size={14} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+          Copy Room ID
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm("Are you sure you want to leave the workspace?")) {
+              window.location.href = "/";
+            }
+          }}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-medium text-red-400 transition-all group"
+        >
+          <LogOut size={14} className="group-hover:-translate-x-1 transition-transform" />
+          Leave Collaboration
+        </button>
+      </div>
     </div>
   );
 }

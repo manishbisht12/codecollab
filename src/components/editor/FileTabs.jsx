@@ -1,52 +1,66 @@
 import { useContext } from "react";
+import { useParams } from "react-router-dom";
 import { EditorContext } from "../../context/EditorContext";
+import { useSocket } from "../../context/SocketContext";
 import { X } from "lucide-react";
 
 function FileTabs() {
 
-  const { tabs, activeTab, setActiveTab, setTabs } = useContext(EditorContext);
+  const { tabs, activeTab, setActiveTab, setTabs, deleteFromTree } = useContext(EditorContext);
+  const socket = useSocket();
+  const { roomId } = useParams();
 
   const closeTab = (e, tabName) => {
     e.stopPropagation();
-
-    const updatedTabs = tabs.filter((tab) => tab.name !== tabName);
-    setTabs(updatedTabs);
-
-    if (activeTab?.name === tabName) {
-      setActiveTab(updatedTabs[updatedTabs.length - 1] || null);
+    deleteFromTree(tabName);
+    if (socket) {
+        socket.emit("file-system-update", { 
+            roomId, 
+            type: "item-delete", 
+            data: { name: tabName } 
+        });
     }
   };
 
   return (
-    <div className="flex border-b border-slate-800 bg-[#020617] overflow-x-auto">
+    <div className="flex border-b border-slate-800 bg-[#020617] overflow-x-auto no-scrollbar">
 
       {tabs.map((tab, index) => (
 
         <div
           key={index}
-          onClick={() => setActiveTab(tab)}
-          className={`group flex items-center gap-2 px-4 py-2 text-sm cursor-pointer border-r border-slate-800
+          onClick={() => {
+            setActiveTab(tab);
+            if (socket) {
+                socket.emit("file-system-update", { 
+                    roomId, 
+                    type: "file-open", 
+                    data: { node: tab } 
+                });
+            }
+          }}
+          className={`group flex items-center gap-2 px-4 py-3 text-[11px] font-medium cursor-pointer border-r border-slate-800 transition-all
           ${activeTab?.name === tab.name
-            ? "bg-[#0b0f1a] text-white"
-            : "text-slate-400 hover:bg-slate-900"
+            ? "bg-[#0b0f1a] text-white border-t-2 border-t-indigo-500 shadow-inner"
+            : "text-slate-500 hover:bg-slate-900/50 hover:text-slate-300"
           }`}
         >
 
           {/* FILE NAME */}
-          <span>{tab.name}</span>
+          <span className="truncate max-w-[120px]">{tab.name}</span>
 
-          {/* CROSS ICON (SHOW ON HOVER) */}
+          {/* CROSS ICON */}
           <X
-            size={14}
+            size={12}
             onClick={(e) => closeTab(e, tab.name)}
-            className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400"
+            className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded p-[1px] transition-all"
           />
 
         </div>
 
       ))}
 
-      <div className="px-3 py-2 text-slate-500 cursor-pointer">+</div>
+      <div className="px-3 flex items-center text-slate-600 hover:text-slate-300 cursor-pointer transition-colors">+</div>
 
     </div>
   );
