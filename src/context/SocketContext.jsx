@@ -9,7 +9,10 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const newSocket = io("http://localhost:5000");
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+    const newSocket = io(backendUrl, {
+      transports: ["websocket"]
+    });
     setSocket(newSocket);
 
     return () => newSocket.close();
