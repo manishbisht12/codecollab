@@ -14,23 +14,9 @@ import {
 import { EditorContext } from "../../context/EditorContext";
 import { useSocket } from "../../context/SocketContext";
 
-function EditorHeader() {
+function EditorHeader({ users = [] }) {
   const { activeTab } = useContext(EditorContext);
   const { roomId } = useParams();
-  const socket = useSocket();
-  const [users, setUsers] = useState([]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on("room-users", (userList) => {
-      setUsers(userList);
-    });
-
-    return () => {
-      socket.off("room-users");
-    };
-  }, [socket]);
 
   return (
     <div className="h-14 border-b border-slate-800 flex items-center justify-between px-4 bg-[#020617] text-slate-300">

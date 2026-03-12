@@ -1,4 +1,4 @@
-import React, { useEffect, useContext } from "react";
+import React, { useEffect, useContext, useState } from "react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
 import { useSocket } from "../context/SocketContext";
@@ -23,6 +23,7 @@ function Editor() {
     deleteFromTree 
   } = useContext(EditorContext);
 
+  const [users, setUsers] = useState([]);
   const username = location.state?.username;
 
   useEffect(() => {
@@ -38,6 +39,10 @@ function Editor() {
     socket.emit("join-room", { roomId, username });
 
     // Listen for room-related events
+    socket.on("room-users", (userList) => {
+        setUsers(userList);
+    });
+
     const handleUserJoined = ({ username: joinedUser }) => {
         toast.success(`${joinedUser} joined the workspace`, {
             style: { borderRadius: "8px", background: "#334155", color: "#fff" },
@@ -74,6 +79,7 @@ function Editor() {
     socket.on("file-system-sync", handleFileSystemSync);
 
     return () => {
+      socket.off("room-users");
       socket.off("user-joined", handleUserJoined);
       socket.off("user-left", handleUserLeft);
       socket.off("file-system-sync", handleFileSystemSync);
@@ -85,7 +91,7 @@ function Editor() {
       <Toaster position="top-right" />
       
       {/* Top Navbar */}
-      <EditorHeader />
+      <EditorHeader users={users} />
 
       {/* Main Layout */}
       <div className="flex flex-1 overflow-hidden">
@@ -107,7 +113,7 @@ function Editor() {
           </div>
 
           {/* Status Bar (only under editor) */}
-          <StatusBar />
+          <StatusBar users={users} />
 
         </div>
 

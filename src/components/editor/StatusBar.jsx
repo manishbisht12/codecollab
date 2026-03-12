@@ -1,6 +1,6 @@
 import { Wifi } from "lucide-react";
 
-export default function StatusBar() {
+export default function StatusBar({users=[]}) {
   return (
     <div className="w-full bg-[#5b5bd6] text-white text-xs px-4 py-2 flex items-center justify-between">
 
@@ -16,7 +16,7 @@ export default function StatusBar() {
 
         <span className="flex items-center gap-2 text-green-300">
           <span className="w-2 h-2 bg-green-400 rounded-full"></span>
-          3 online
+          {users.length} Online
         </span>
       </div>
 
