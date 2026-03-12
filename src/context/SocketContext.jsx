@@ -9,7 +9,7 @@ export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+    const backendUrl = "https://codecollab-backend-4t1d.onrender.com" || "http://localhost:5000";
     const newSocket = io(backendUrl, {
       transports: ["websocket"]
     });
